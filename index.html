@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高三冲刺模拟器 - 硬核版</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background-color: #f3f4f6;
+        }
+        
+        /* Custom scrollbar for logs */
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .log-container::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        .log-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .log-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        .stat-bar-bg {
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            height: 0.75rem;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .stat-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease-in-out;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Range slider styling */
+        input[type=range] {
+            height: 26px;
+            -webkit-appearance: none;
+            margin: 10px 0;
+            width: 100%;
+            background: transparent; 
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 5px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -7px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-2xl bg-white p-6 md:p-8 rounded-xl shadow-xl border border-gray-200 my-8">
+            <h1 class="text-3xl md:text-4xl font-bold mb-2 text-indigo-900 text-center">高三冲刺模拟器</h1>
+            <p class="text-gray-500 mb-6 text-center">距离高考还有 365 天。这是一个残酷的夏天。</p>
+            
+            <!-- Attribute Allocation -->
+            <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">属性分配</h2>
+                    <span class="text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-bold">剩余点数: <span id="points-remaining">20</span></span>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Physical -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-bold flex items-center">💪 体能 <span class="ml-2 text-xs font-normal text-gray-500">减少疲劳积累，生病概率低</span></span>
+                            <span class="font-mono text-indigo-600 font-bold" id="val-physical">10</span>
+                        </div>
+                        <input type="range" min="10" max="40" value="10" class="w-full" oninput="updatePoints('physical', this.value)" id="input-physical">
+                    </div>
+
+                    <!-- Mental -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-bold flex items-center">🧠 精神力 <span class="ml-2 text-xs font-normal text-gray-500">减少快乐流失，抗压能力强</span></span>
+                            <span class="font-mono text-indigo-600 font-bold" id="val-mental">10</span>
+                        </div>
+                        <input type="range" min="10" max="40" value="10" class="w-full" oninput="updatePoints('mental', this.value)" id="input-mental">
+                    </div>
+
+                    <!-- Logic -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-bold flex items-center">💡 逻辑天赋 <span class="ml-2 text-xs font-normal text-gray-500">理科(数理化生)学习加成</span></span>
+                            <span class="font-mono text-indigo-600 font-bold" id="val-logic">10</span>
+                        </div>
+                        <input type="range" min="10" max="40" value="10" class="w-full" oninput="updatePoints('logic', this.value)" id="input-logic">
+                    </div>
+
+                    <!-- Memory -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-bold flex items-center">📚 背书天赋 <span class="ml-2 text-xs font-normal text-gray-500">文科(语英政史地)学习加成</span></span>
+                            <span class="font-mono text-indigo-600 font-bold" id="val-memory">10</span>
+                        </div>
+                        <input type="range" min="10" max="40" value="10" class="w-full" oninput="updatePoints('memory', this.value)" id="input-memory">
+                    </div>
+                </div>
+                <p id="point-warning" class="text-red-500 text-xs mt-2 hidden text-right">点数不足！</p>
+            </div>
+
+            <h2 class="text-xl font-bold mb-4">选修科目 (3门)</h2>
+            <div class="grid grid-cols-3 gap-3 mb-8" id="subject-selection">
+                <!-- JS Injected -->
+            </div>
+            
+            <button id="start-game-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
+                开始苦难的高三
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN GAME LAYOUT -->
+    <div id="game-ui" class="flex-1 flex flex-col md:flex-row h-full hidden">
+        
+        <!-- SIDEBAR: STATS -->
+        <div class="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col overflow-y-auto shrink-0 z-20 shadow-md">
+            <div class="p-6 bg-indigo-900 text-white relative overflow-hidden">
+                <!-- Background pattern -->
+                <div class="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 rounded-full bg-indigo-800 opacity-50"></div>
+                
+                <div class="relative z-10">
+                    <div class="flex justify-between items-end mb-4">
+                        <h2 class="text-3xl font-bold">第 <span id="day-display">1</span> 天</h2>
+                        <span class="text-indigo-200 text-sm" id="date-display">9月1日</span>
+                    </div>
+                    
+                    <div class="bg-indigo-800/50 rounded-lg p-3 backdrop-blur-sm border border-indigo-700 mb-2">
+                        <div class="text-xs text-indigo-300 uppercase tracking-wider mb-1">距离高考</div>
+                        <div class="text-2xl font-bold text-white"><span id="countdown-display">365</span> <span class="text-sm font-normal">天</span></div>
+                    </div>
+
+                     <div class="bg-orange-900/40 rounded-lg p-3 backdrop-blur-sm border border-orange-700/50">
+                        <div class="text-xs text-orange-200 uppercase tracking-wider mb-1">距离 <span id="next-exam-name">期中考试</span></div>
+                        <div class="text-xl font-bold text-white"><span id="next-exam-countdown">60</span> <span class="text-sm font-normal">天</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 space-y-6 flex-1 bg-gray-50">
+                <!-- Status -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center">
+                        当前状态
+                        <span class="ml-auto text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500">实时</span>
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>😊 快乐值</span>
+                                <span id="stat-happiness-val" class="font-bold text-gray-700">50</span>
+                            </div>
+                            <div class="stat-bar-bg"><div id="stat-happiness-bar" class="stat-bar-fill bg-yellow-400" style="width: 50%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>😫 疲劳度</span>
+                                <span id="stat-fatigue-val" class="font-bold text-gray-700">0</span>
+                            </div>
+                            <div class="stat-bar-bg"><div id="stat-fatigue-bar" class="stat-bar-fill bg-red-500" style="width: 0%"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attributes Summary -->
+                <div class="grid grid-cols-2 gap-2 text-xs text-gray-500 bg-white p-3 rounded-xl border border-gray-100">
+                    <div class="flex justify-between"><span>体能:</span> <span id="disp-attr-physical" class="font-bold text-gray-800">10</span></div>
+                    <div class="flex justify-between"><span>精神:</span> <span id="disp-attr-mental" class="font-bold text-gray-800">10</span></div>
+                    <div class="flex justify-between"><span>逻辑:</span> <span id="disp-attr-logic" class="font-bold text-gray-800">10</span></div>
+                    <div class="flex justify-between"><span>背书:</span> <span id="disp-attr-memory" class="font-bold text-gray-800">10</span></div>
+                </div>
+
+                <!-- Subjects -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">学科水平 (难度: 炼狱)</h3>
+                    <div id="subjects-list" class="space-y-3 text-sm">
+                        <!-- Subjects injected here -->
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-3 text-center">如果不复习，水平每天都会倒退</p>
+                </div>
+
+                 <!-- Last Rank -->
+                 <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-center">
+                    <h3 class="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1">上次全校排名</h3>
+                    <div class="text-indigo-900 font-bold text-2xl">
+                        <span id="last-rank">--</span> <span class="text-sm font-normal text-indigo-400">/ 1000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT AREA -->
+        <div class="flex-1 flex flex-col bg-gray-100 overflow-hidden relative">
+            
+            <!-- Log Area -->
+            <div id="log-container" class="log-container flex-1 p-4 md:p-8 overflow-y-auto space-y-4 pb-48">
+                <div class="text-center text-gray-400 text-sm my-4 border-b border-gray-200 pb-2 w-1/2 mx-auto">--- 游戏开始 ---</div>
+            </div>
+
+            <!-- Interaction Area (Bottom Fixed) -->
+            <div class="bg-white/90 backdrop-blur border-t border-gray-200 p-6 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] z-10 absolute bottom-0 w-full">
+                <div id="action-area" class="max-w-4xl mx-auto">
+                    <!-- Dynamic Buttons will appear here -->
+                    <p class="text-center text-gray-500 animate-pulse">正在加载...</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/70 z-40 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
+            
+            <!-- Event Header -->
+            <div class="bg-gradient-to-r from-indigo-600 to-indigo-800 p-6 text-white shrink-0">
+                <h3 id="modal-title" class="text-xl font-bold tracking-tight">事件标题</h3>
+            </div>
+            
+            <!-- Event Body -->
+            <div class="p-6 overflow-y-auto">
+                <div id="modal-desc" class="text-gray-700 text-lg leading-relaxed mb-8">事件描述文本...</div>
+                
+                <!-- Options -->
+                <div id="modal-options" class="space-y-3">
+                    <!-- Buttons injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION & DATA
+        // ==========================================
+        
+        const CONSTANTS = {
+            TOTAL_DAYS: 365,
+            START_DATE: new Date('2023-09-01'),
+            TOTAL_STUDENTS: 1000,
+            MAX_HAPPINESS: 100,
+            MAX_FATIGUE: 100,
+            DAILY_DECAY_RATE: 0.8, // Base points lost per day per subject if not studied
+            BASE_POINTS: 20, // Points to allocate
+            INITIAL_ATTR_BASE: 10,
+            SUBJECT_CAP_MAIN: 150,
+            SUBJECT_CAP_SUB: 100,
+        };
+
+        const ALL_SUBJECTS = {
+            chinese: { name: '语文', type: 'main', logicWeight: 0.3, memoryWeight: 0.7, decay: 0.5 },
+            math: { name: '数学', type: 'main', logicWeight: 0.9, memoryWeight: 0.1, decay: 1.2 }, // Math drops fast if not practiced
+            english: { name: '英语', type: 'main', logicWeight: 0.2, memoryWeight: 0.8, decay: 0.8 },
+            physics: { name: '物理', type: 'sub', logicWeight: 0.85, memoryWeight: 0.15, decay: 1.0 },
+            chemistry: { name: '化学', type: 'sub', logicWeight: 0.7, memoryWeight: 0.3, decay: 0.9 },
+            biology: { name: '生物', type: 'sub', logicWeight: 0.5, memoryWeight: 0.5, decay: 0.7 },
+            politics: { name: '政治', type: 'sub', logicWeight: 0.3, memoryWeight: 0.7, decay: 0.6 },
+            history: { name: '历史', type: 'sub', logicWeight: 0.2, memoryWeight: 0.8, decay: 0.6 },
+            geography: { name: '地理', type: 'sub', logicWeight: 0.6, memoryWeight: 0.4, decay: 0.7 }
+        };
+
+        const EXAM_SCHEDULE = {
+            60: { name: '期中考试', importance: 1.0 },
+            120: { name: '期末考试', importance: 1.2 },
+            200: { name: '一模', importance: 1.5 },
+            260: { name: '二模', importance: 1.5 },
+            310: { name: '三模', importance: 1.2 },
+            365: { name: '高考', importance: 2.0 }
+        };
+
+        const EVENT_POOL = [
+            {
+                id: 'burnout',
+                title: '崩溃边缘',
+                desc: '你感到前所未有的绝望，看着书本上的字一个个像蚂蚁一样爬走。',
+                trigger: (g) => g.fatigue > 90 || g.happiness < 10,
+                weight: 50, // Very high priority if stats are bad
+                options: [
+                    {
+                        text: '大哭一场 (-15疲劳, +10快乐, 浪费一晚)',
+                        effect: (g) => {
+                            g.modifyStat('fatigue', -15);
+                            g.modifyStat('happiness', 10);
+                            return '哭出来好受多了，但今晚什么也没学进去。';
+                        }
+                    },
+                    {
+                        text: '强行看书 (+2疲劳, -5快乐, 效率极低)',
+                        effect: (g) => {
+                            g.modifyStat('fatigue', 2);
+                            g.modifyStat('happiness', -5);
+                            // No learning gain here effectively
+                            return '你盯着这一页看了一个小时，只记住了页码。';
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'inspiration',
+                title: '灵光一闪',
+                desc: '走在路上，你突然想通了昨天那道数学压轴题的做法！',
+                trigger: (g) => g.subjects['math'].level > 40 && g.fatigue < 50,
+                weight: 5,
+                options: [
+                    {
+                        text: '赶紧记下来 (+5 数学, +5 快乐)',
+                        effect: (g) => {
+                            g.improveSubject('math', 5);
+                            g.modifyStat('happiness', 5);
+                            return '这就是逻辑天赋的魅力吗？感觉真棒！';
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'flu_season',
+                title: '流感肆虐',
+                desc: '班里有一半人都感冒了，此起彼伏的咳嗽声。',
+                trigger: (g) => true,
+                weight: 8,
+                options: [
+                    {
+                        text: '小心防护',
+                        effect: (g) => {
+                            // High physical reduces chance of catching
+                            const chance = Math.max(0, 80 - g.attributes.physical * 1.5);
+                            if (Math.random() * 100 < chance) {
+                                g.modifyStat('physical', -5);
+                                g.modifyStat('fatigue', 20);
+                                g.modifyStat('happiness', -10);
+                                return '尽管你戴了口罩，还是中招了...头昏脑涨。';
+                            } else {
+                                return '多亏了你平时注重锻炼（体能高），你逃过一劫。';
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'parent_pressure',
+                title: '父母的谈话',
+                desc: '晚饭时，父母小心翼翼地问起你的模考成绩，眼神充满期待又怕给你压力。',
+                trigger: (g) => g.day > 100,
+                weight: 10,
+                options: [
+                    {
+                        text: '安慰他们 (+5 精神)',
+                        effect: (g) => {
+                            g.modifyStat('mental', 5);
+                            g.modifyStat('happiness', -5);
+                            return '你表现得很成熟，但心里还是沉甸甸的。';
+                        }
+                    },
+                    {
+                        text: '爆发 (+10 快乐, -10 精神)',
+                        effect: (g) => {
+                            g.modifyStat('happiness', 10);
+                            g.modifyStat('mental', -10);
+                            return '你把碗一摔，“别烦我！”虽然发泄了，但事后很后悔。';
+                        }
+                    }
+                ]
+            },
+             {
+                id: 'deep_sleep',
+                title: '深度睡眠',
+                desc: '昨晚你睡得像个婴儿一样。',
+                trigger: (g) => g.fatigue > 60,
+                weight: 12,
+                options: [
+                    {
+                        text: '起床 (+精力充沛)',
+                        effect: (g) => {
+                            g.modifyStat('fatigue', -30);
+                            g.modifyStat('happiness', 5);
+                            return '难得的好觉，感觉身体充满了力量！';
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // ==========================================
+        // GAME ENGINE
+        // ==========================================
+
+        class Game {
+            constructor() {
+                this.day = 1;
+                this.happiness = 80;
+                this.fatigue = 0;
+                
+                // Attributes
+                this.attributes = {
+                    physical: 10,
+                    mental: 10,
+                    logic: 10,
+                    memory: 10
+                };
+
+                // Subjects
+                this.subjects = {};
+                
+                // State
+                this.examHistory = [];
+                this.schedule = []; 
+                this.currentPhase = 0;
+            }
+
+            // --- Initialization ---
+            init(selectedSubjects, attributes) {
+                this.attributes = attributes;
+                
+                // Setup Subjects (Low start 20-30 to make it hard)
+                const mainSubs = ['chinese', 'math', 'english'];
+                [...mainSubs, ...selectedSubjects].forEach(key => {
+                    this.subjects[key] = {
+                        ...ALL_SUBJECTS[key],
+                        level: 15 + Math.random() * 10 // Start very low!
+                    };
+                });
+
+                this.log("<strong>高三誓师大会结束了。</strong><br>看着黑板上的倒计时，你感到一阵窒息。这是你的战场。");
+                this.startDay();
+                updateUI();
+            }
+
+            // --- Time Management ---
+            getDate() {
+                const date = new Date(CONSTANTS.START_DATE);
+                date.setDate(date.getDate() + (this.day - 1));
+                return `${date.getMonth() + 1}月${date.getDate()}日`;
+            }
+
+            getNextExamInfo() {
+                const days = Object.keys(EXAM_SCHEDULE).map(Number).sort((a,b)=>a-b);
+                const nextDay = days.find(d => d >= this.day);
+                if (!nextDay) return { name: "无", days: 0 };
+                return { 
+                    name: EXAM_SCHEDULE[nextDay].name, 
+                    days: nextDay - this.day 
+                };
+            }
+
+            isWeekend() {
+                const dim = (this.day + 4) % 7;
+                return dim === 6 || dim === 0;
+            }
+
+            startDay() {
+                if (this.day > CONSTANTS.TOTAL_DAYS) {
+                    this.triggerEnding();
+                    return;
+                }
+
+                // Daily Decay Logic (Hardcore Mode)
+                this.applyDailyDecay();
+
+                // Fatigue Recovery (Base + Physical Bonus)
+                const recovery = 10 + (this.attributes.physical * 0.5); 
+                this.fatigue = Math.max(0, this.fatigue - recovery);
+                
+                // Check for Exam
+                if (EXAM_SCHEDULE[this.day]) {
+                    this.triggerExam(EXAM_SCHEDULE[this.day]);
+                    return;
+                }
+
+                this.generateSchedule();
+                this.currentPhase = 0;
+                
+                const dayType = this.isWeekend() ? '周末' : '工作日';
+                this.log(`\n📅 <strong>第 ${this.day} 天 (${dayType})</strong>`);
+                this.renderSchedulePhase();
+            }
+
+            applyDailyDecay() {
+                // Skills atrophy if you don't use them
+                let decayMsg = [];
+                for (let key in this.subjects) {
+                    const sub = this.subjects[key];
+                    // Base decay * randomness
+                    let amt = CONSTANTS.DAILY_DECAY_RATE * sub.decay * (0.8 + Math.random() * 0.4);
+                    
+                    // High level subjects decay faster (hard to maintain peak)
+                    if (sub.level > 100) amt *= 1.5;
+                    else if (sub.level < 30) amt *= 0.5;
+
+                    sub.level = Math.max(0, sub.level - amt);
+                }
+                // Only log significant decay occasionally or it spams
+            }
+
+            generateSchedule() {
+                this.schedule = [];
+                const subjectKeys = Object.keys(this.subjects);
+                
+                if (this.isWeekend()) {
+                    for (let i = 0; i < 5; i++) {
+                        this.schedule.push({ type: 'free', label: '自由复习' });
+                    }
+                } else {
+                    // Weekday: 4 Classes
+                    for (let i = 0; i < 4; i++) {
+                        const randSub = subjectKeys[Math.floor(Math.random() * subjectKeys.length)];
+                        this.schedule.push({ type: 'class', subject: randSub, label: this.subjects[randSub].name + '课' });
+                    }
+                }
+                this.schedule.push({ type: 'evening', label: '晚间休息' });
+            }
+
+            // --- Actions ---
+            processPhase(choice) {
+                const slot = this.schedule[this.currentPhase];
+                let logMsg = "";
+                
+                if (slot.type === 'class') {
+                    if (choice === 'attend') {
+                        const result = this.calcStudyResult(slot.subject, 'class');
+                        this.improveSubject(slot.subject, result.gain);
+                        this.modifyStat('fatigue', result.fatigueCost);
+                        this.modifyStat('happiness', -2); // Classes are boring
+                        
+                        let extra = result.crit ? " <span class='text-red-600 font-bold'>顿悟!</span>" : "";
+                        if (result.gain === 0) extra = " <span class='text-gray-400'>(没听懂)</span>";
+                        
+                        logMsg = `上${slot.label}：水平+${result.gain.toFixed(1)}${extra}`;
+                    } else {
+                        // Skip class
+                        this.modifyStat('happiness', 4);
+                        this.modifyStat('fatigue', -5);
+                        logMsg = `你翘掉了${slot.label}，去小卖部买了根烤肠。`;
+                    }
+                } else if (slot.type === 'free') {
+                    if (choice.type === 'study') {
+                        const result = this.calcStudyResult(choice.target, 'self');
+                        this.improveSubject(choice.target, result.gain);
+                        this.modifyStat('fatigue', result.fatigueCost);
+                        this.modifyStat('happiness', -4); // Studying is hard
+                        
+                        let extra = result.crit ? " <span class='text-red-600 font-bold'>效率爆表!</span>" : "";
+                        logMsg = `复习${this.subjects[choice.target].name}：水平+${result.gain.toFixed(1)}${extra}`;
+
+                    } else if (choice.type === 'rest') {
+                        this.modifyStat('fatigue', -15);
+                        this.modifyStat('happiness', 5);
+                        logMsg = `你趴在桌上睡了一觉，回复了体力。`;
+                    } else if (choice.type === 'exercise') {
+                        this.modifyStat('physical', 0.5); // Hard to gain raw stats
+                        this.modifyStat('fatigue', 10);
+                        this.modifyStat('happiness', 8);
+                        logMsg = `你去操场跑了五圈，虽然累但很爽。`;
+                    }
+                }
+
+                if (logMsg) this.log(logMsg);
+
+                this.currentPhase++;
+                updateUI();
+
+                if (this.currentPhase >= this.schedule.length) {
+                    this.endDay();
+                } else {
+                    if (this.schedule[this.currentPhase].type === 'evening') {
+                        this.triggerRandomEvent();
+                    } else {
+                        this.renderSchedulePhase();
+                    }
+                }
+            }
+
+            // Core Difficulty Logic
+            calcStudyResult(subjectKey, mode) {
+                const sub = this.subjects[subjectKey];
+                
+                // 1. Base Gain
+                let gain = mode === 'class' ? 2.0 : 2.5;
+                
+                // 2. Talent Multiplier
+                // Logic helps Math/Science, Memory helps Humanities
+                const logicBonus = this.attributes.logic * sub.logicWeight;
+                const memoryBonus = this.attributes.memory * sub.memoryWeight;
+                const talentFactor = (logicBonus + memoryBonus) / 20; // Normalize roughly around 1.0 for avg stats (20)
+                
+                gain *= talentFactor;
+
+                // 3. Status Efficiency
+                let efficiency = 1.0;
+                if (this.fatigue > 90) efficiency = 0.1; // Collapse
+                else if (this.fatigue > 70) efficiency = 0.4;
+                else if (this.fatigue > 50) efficiency = 0.7;
+                
+                if (this.happiness < 20) efficiency *= 0.5; // Depression
+
+                gain *= efficiency;
+
+                // 4. Random Fluctuation & Crits
+                const roll = Math.random();
+                let crit = false;
+                if (roll > 0.95) { gain *= 2.0; crit = true; } // 5% crit
+                else if (roll < 0.2) { gain *= 0.2; } // 20% bad study session
+
+                // 5. Diminishing Returns at high levels
+                if (sub.level > 120) gain *= 0.5;
+                
+                return {
+                    gain: gain,
+                    fatigueCost: mode === 'class' ? 5 : 8,
+                    crit: crit
+                };
+            }
+
+            endDay() {
+                this.day++;
+                setTimeout(() => this.startDay(), 600);
+            }
+
+            // --- Event System ---
+            triggerRandomEvent() {
+                const candidates = EVENT_POOL.filter(e => e.trigger(this));
+                
+                if (candidates.length === 0 || Math.random() > 0.6) {
+                    this.log("今晚无事发生。");
+                    this.endDay();
+                    return;
+                }
+
+                const totalWeight = candidates.reduce((sum, e) => sum + e.weight, 0);
+                let r = Math.random() * totalWeight;
+                let selectedEvent = candidates[0];
+                for (let e of candidates) {
+                    r -= e.weight;
+                    if (r <= 0) {
+                        selectedEvent = e;
+                        break;
+                    }
+                }
+
+                showModal(selectedEvent.title, selectedEvent.desc, selectedEvent.options.map(opt => ({
+                    text: opt.text,
+                    onClick: () => {
+                        const resultText = opt.effect(this);
+                        this.log(`> ${selectedEvent.title}: ${resultText}`);
+                        closeModal();
+                        this.endDay();
+                    }
+                })));
+            }
+
+            triggerExam(examData) {
+                let totalScore = 0;
+                let maxTotal = 0;
+                let details = "";
+
+                for (let key in this.subjects) {
+                    const sub = this.subjects[key];
+                    const maxScore = sub.type === 'main' ? CONSTANTS.SUBJECT_CAP_MAIN : CONSTANTS.SUBJECT_CAP_SUB;
+                    maxTotal += maxScore;
+
+                    // Score calculation: Level plus small randomness. 
+                    // Level is the "True Skill".
+                    // If you are fatigued, you perform worse.
+                    let performaceFactor = 1.0;
+                    if (this.fatigue > 50) performaceFactor -= 0.1;
+                    if (this.fatigue > 80) performaceFactor -= 0.3;
+                    if (this.happiness < 30) performaceFactor -= 0.1;
+                    // Mental stat helps stabilize performance
+                    const stability = this.attributes.mental / 100; // 0.1 to 0.5
+                    performaceFactor += (Math.random() * stability - stability/2); // Small variance
+
+                    let score = sub.level * performaceFactor;
+                    score = Math.min(maxScore, Math.max(0, score));
+
+                    totalScore += score;
+                    details += `<div class="flex justify-between border-b border-gray-100 py-1"><span>${sub.name}</span> <span>${Math.round(score)}</span></div>`;
+                }
+
+                // Rank Calculation: Top score is roughly maxTotal * 0.95
+                // The distribution is a bell curve.
+                const percent = totalScore / maxTotal; // 0 to 1
+                // 1.0 -> Rank 1. 0.5 -> Rank 500. 0.0 -> Rank 1000.
+                // Use a power curve to make top ranks harder
+                let rank = Math.floor(CONSTANTS.TOTAL_STUDENTS * Math.pow(1 - percent * 0.95, 2)); 
+                rank = Math.max(1, Math.min(1000, rank));
+
+                this.examHistory.push({ day: this.day, name: examData.name, score: totalScore, rank: rank });
+                
+                // Psychological Impact
+                let moodChange = 0;
+                if (rank < 100) moodChange = 20;
+                else if (rank < 300) moodChange = 5;
+                else if (rank > 700) moodChange = -15;
+                
+                this.modifyStat('happiness', moodChange);
+
+                showModal(`📊 ${examData.name} 成绩单`, 
+                    `<div class="text-sm mb-4 bg-gray-50 p-3 rounded">${details}</div>
+                     <div class="flex justify-between items-center text-xl font-bold border-t pt-2">
+                        <span>总分: ${Math.round(totalScore)}</span>
+                        <span class="text-indigo-600">排名: ${rank}</span>
+                     </div>
+                     <p class="text-xs text-gray-500 mt-2">心态变化: ${moodChange > 0 ? '+' : ''}${moodChange}</p>`, 
+                    [{
+                        text: "我知道了",
+                        onClick: () => {
+                            closeModal();
+                            document.getElementById('last-rank').innerText = rank;
+                            this.endDay();
+                        }
+                    }]
+                );
+            }
+            
+            triggerEnding() {
+                const lastExam = this.examHistory[this.examHistory.length - 1];
+                let endingText = "";
+                const r = lastExam.rank;
+                
+                if (r <= 5) endingText = "【传说结局】你成为了省高考状元，记者把你们家门槛都踏破了。你是神话。";
+                else if (r <= 50) endingText = "【完美结局】你考入了清北复交，前途不可限量。";
+                else if (r <= 200) endingText = "【优秀结局】你进入了顶尖985大学，不负众望。";
+                else if (r <= 500) endingText = "【普通结局】你考上了一本，虽然平凡，但也是新的开始。";
+                else if (r <= 900) endingText = "【遗憾结局】你考上了本科，但或许不是你心仪的学校。";
+                else endingText = "【悲惨结局】落榜了。或许复读，或许打工，人生不仅是考试，但这一关你没过。";
+
+                showModal("🎓 毕业啦", 
+                    `高考结束铃声响起的那一刻，一切都结束了。<br><br>你的最终排名是：<strong class="text-2xl text-indigo-600">${r}</strong><br><br>${endingText}`,
+                    [{ text: "重新开始人生", onClick: () => location.reload() }]
+                );
+            }
+
+            // --- Helpers ---
+            modifyStat(key, val) {
+                // Apply Attributes Buffs/Debuffs
+                if (key === 'happiness' && val < 0) {
+                    // Mental reduces happiness loss
+                    // Max mental 50 -> reduces loss by 25%
+                    const mitigation = this.attributes.mental / 200; 
+                    val = val * (1 - mitigation);
+                }
+                if (key === 'fatigue' && val > 0) {
+                    // Physical reduces fatigue gain
+                    const mitigation = this.attributes.physical / 200;
+                    val = val * (1 - mitigation);
+                }
+
+                if (key === 'happiness') {
+                    this.happiness = Math.max(0, Math.min(CONSTANTS.MAX_HAPPINESS, this.happiness + val));
+                } else if (key === 'fatigue') {
+                    this.fatigue = Math.max(0, Math.min(CONSTANTS.MAX_FATIGUE, this.fatigue + val));
+                } else if (this.attributes[key] !== undefined) {
+                    this.attributes[key] += val;
+                }
+            }
+
+            improveSubject(key, val) {
+                if(this.subjects[key]) {
+                    this.subjects[key].level += val;
+                }
+            }
+
+            log(msg) {
+                const container = document.getElementById('log-container');
+                const p = document.createElement('div');
+                p.className = 'fade-in text-gray-700 bg-white p-3 rounded shadow-sm border border-gray-100 text-sm mb-2';
+                p.innerHTML = msg;
+                container.appendChild(p);
+                container.scrollTop = container.scrollHeight;
+            }
+
+            renderSchedulePhase() {
+                const container = document.getElementById('action-area');
+                const slot = this.schedule[this.currentPhase];
+                if (!slot) return; 
+
+                // Fatigue Warning
+                let warning = "";
+                if(this.fatigue > 80) warning = `<div class="text-red-500 font-bold mb-2 text-center text-sm">⚠ 极度疲劳！学习效率极低！</div>`;
+                else if(this.fatigue > 50) warning = `<div class="text-orange-500 font-bold mb-2 text-center text-sm">⚠ 有点累了，效率下降</div>`;
+
+                if (slot.type === 'class') {
+                    container.innerHTML = `
+                        ${warning}
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <span class="text-xs text-gray-400 uppercase tracking-widest">当前课程</span>
+                                <h3 class="text-2xl font-bold text-indigo-900">${slot.label}</h3>
+                            </div>
+                            <div class="text-right">
+                                <span class="block text-xs text-gray-400">当前水平</span>
+                                <span class="text-xl font-bold">${Math.round(this.subjects[slot.subject].level)}</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button onclick="game.processPhase('attend')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-xl shadow transition flex flex-col items-center">
+                                <span>认真听讲</span>
+                                <span class="text-xs opacity-70 font-normal mt-1">+水平 ++疲劳</span>
+                            </button>
+                            <button onclick="game.processPhase('skip')" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-4 px-4 rounded-xl shadow-sm transition flex flex-col items-center">
+                                <span>摸鱼走神</span>
+                                <span class="text-xs opacity-70 font-normal mt-1">+快乐 -疲劳</span>
+                            </button>
+                        </div>
+                    `;
+                } else if (slot.type === 'free') {
+                    let html = `
+                        ${warning}
+                         <div class="mb-4">
+                            <span class="text-xs text-gray-400 uppercase tracking-widest">自由时间</span>
+                            <h3 class="text-xl font-bold text-indigo-900">此刻的选择...</h3>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                            <button onclick="game.processPhase({type:'rest'})" class="bg-green-100 hover:bg-green-200 text-green-800 py-3 rounded-lg font-bold border border-green-200 transition">
+                                😴 补觉 (-疲劳)
+                            </button>
+                            <button onclick="game.processPhase({type:'exercise'})" class="bg-orange-100 hover:bg-orange-200 text-orange-800 py-3 rounded-lg font-bold border border-orange-200 transition">
+                                🏃 锻炼 (+体能)
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                    `;
+                    
+                    Object.keys(this.subjects).forEach(key => {
+                         html += `
+                            <button onclick="game.processPhase({type:'study', target:'${key}'})" class="bg-white border border-gray-200 hover:border-indigo-500 hover:text-indigo-600 text-gray-600 py-2 px-1 rounded-lg text-sm shadow-sm transition">
+                                ${this.subjects[key].name} <span class="text-xs text-gray-300">|</span> ${Math.round(this.subjects[key].level)}
+                            </button>
+                         `;
+                    });
+                    
+                    html += `</div>`;
+                    container.innerHTML = html;
+                }
+            }
+        }
+
+        // ==========================================
+        // UI HELPERS & SETUP
+        // ==========================================
+        
+        const game = new Game();
+
+        // Attribute Setup Logic
+        let pointsRemaining = CONSTANTS.BASE_POINTS;
+        const attrValues = { physical: 10, mental: 10, logic: 10, memory: 10 };
+
+        function updatePoints(key, value) {
+            value = parseInt(value);
+            const currentTotal = Object.values(attrValues).reduce((a,b)=>a+b, 0);
+            const diff = value - attrValues[key];
+            
+            // Check if we have points (ignoring the slider's visual update first)
+            // But slider logic is tricky. Let's recalculate from inputs.
+            // A simpler way: Reset all from DOM state
+            
+            let totalUsed = 0;
+            ['physical', 'mental', 'logic', 'memory'].forEach(k => {
+                totalUsed += parseInt(document.getElementById('input-'+k).value);
+            });
+            
+            const totalAllowed = CONSTANTS.BASE_POINTS + (CONSTANTS.INITIAL_ATTR_BASE * 4); // 20 + 40 = 60 total sum
+            
+            const warning = document.getElementById('point-warning');
+            const btn = document.getElementById('start-game-btn');
+            const remainDisplay = document.getElementById('points-remaining');
+            
+            const remaining = totalAllowed - totalUsed;
+            
+            if (remaining < 0) {
+                // Revert
+                document.getElementById('input-'+key).value = attrValues[key]; // set back
+                warning.classList.remove('hidden');
+                return;
+            } else {
+                warning.classList.add('hidden');
+                attrValues[key] = value;
+                document.getElementById('val-'+key).innerText = value;
+                remainDisplay.innerText = remaining;
+                
+                // Can only start if points used up? Optional. Let's say yes.
+                // Or allow starting with unspent points (hard mode).
+                // Let's enforce spending for best char.
+            }
+        }
+
+        function updateUI() {
+            // Stats
+            document.getElementById('stat-happiness-val').innerText = Math.round(game.happiness);
+            document.getElementById('stat-happiness-bar').style.width = game.happiness + '%';
+            
+            document.getElementById('stat-fatigue-val').innerText = Math.round(game.fatigue);
+            document.getElementById('stat-fatigue-bar').style.width = game.fatigue + '%';
+
+            // Sidebar Attr
+            document.getElementById('disp-attr-physical').innerText = Math.round(game.attributes.physical);
+            document.getElementById('disp-attr-mental').innerText = Math.round(game.attributes.mental);
+            document.getElementById('disp-attr-logic').innerText = Math.round(game.attributes.logic);
+            document.getElementById('disp-attr-memory').innerText = Math.round(game.attributes.memory);
+
+            // Time
+            document.getElementById('day-display').innerText = game.day;
+            document.getElementById('date-display').innerText = game.getDate();
+            document.getElementById('countdown-display').innerText = Math.max(0, CONSTANTS.TOTAL_DAYS - game.day);
+
+            // Next Exam
+            const nextExam = game.getNextExamInfo();
+            document.getElementById('next-exam-name').innerText = nextExam.name;
+            document.getElementById('next-exam-countdown').innerText = nextExam.days;
+
+            // Subjects List
+            const subList = document.getElementById('subjects-list');
+            subList.innerHTML = '';
+            for (let key in game.subjects) {
+                const s = game.subjects[key];
+                // Color code based on level
+                let colorClass = "text-gray-500";
+                if(s.level > 120) colorClass = "text-purple-600 font-bold";
+                else if(s.level > 90) colorClass = "text-indigo-600 font-bold";
+                else if(s.level > 60) colorClass = "text-green-600";
+                else if(s.level < 30) colorClass = "text-red-500";
+
+                subList.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100">
+                        <span class="font-medium text-gray-700">${s.name}</span>
+                        <span class="${colorClass}">${Math.round(s.level)}</span>
+                    </div>
+                `;
+            }
+        }
+
+        function showModal(title, desc, actions) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerHTML = desc;
+            
+            const btnContainer = document.getElementById('modal-options');
+            btnContainer.innerHTML = '';
+            
+            actions.forEach(action => {
+                const btn = document.createElement('button');
+                btn.className = "w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold py-4 px-4 rounded-xl text-left border border-indigo-200 transition flex justify-between items-center group";
+                btn.innerHTML = `<span>${action.text}</span> <span class="text-indigo-300 group-hover:text-indigo-600">→</span>`;
+                btn.onclick = action.onClick;
+                btnContainer.appendChild(btn);
+            });
+
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+
+        const setupDiv = document.getElementById('subject-selection');
+        const subOptions = ['physics', 'chemistry', 'biology', 'politics', 'history', 'geography'];
+        
+        subOptions.forEach(key => {
+            const label = document.createElement('label');
+            label.className = "flex flex-col items-center justify-center bg-gray-50 p-3 rounded-lg border-2 border-transparent cursor-pointer hover:bg-indigo-50 transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50";
+            label.innerHTML = `
+                <input type="checkbox" value="${key}" class="hidden" onchange="checkSelectionCount()">
+                <span class="font-bold text-gray-700">${ALL_SUBJECTS[key].name}</span>
+            `;
+            setupDiv.appendChild(label);
+        });
+
+        function checkSelectionCount() {
+            const checked = setupDiv.querySelectorAll('input:checked');
+            const btn = document.getElementById('start-game-btn');
+            const limit = 3;
+            
+            // Check count
+            if (checked.length > limit) {
+                // Uncheck current if over limit (crude but works)
+                event.target.checked = false; 
+                return;
+            }
+
+            if (checked.length === limit) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.classList.add('shadow-indigo-500/50', 'shadow-lg');
+            } else {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.classList.remove('shadow-indigo-500/50', 'shadow-lg');
+            }
+        }
+
+        document.getElementById('start-game-btn').disabled = true; 
+        document.getElementById('start-game-btn').onclick = () => {
+            const checked = Array.from(setupDiv.querySelectorAll('input:checked')).map(i => i.value);
+            
+            if(checked.length !== 3) return;
+
+            // UI Transition
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            
+            // Pass the allocated attributes
+            game.init(checked, {...attrValues});
+        };
+
+    </script>
+</body>
+</html>
